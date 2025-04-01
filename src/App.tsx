@@ -4,7 +4,6 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import GameList from './components/GameList';
 import Features from './components/Features';
-import HowItWorks from './components/HowItWorks';
 import Testimonials from './components/Testimonials';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
@@ -22,7 +21,6 @@ function App() {
             <Hero />
             <GameList />
             <Features />
-            <HowItWorks />
             <Testimonials />
             <FAQ />
           </main>

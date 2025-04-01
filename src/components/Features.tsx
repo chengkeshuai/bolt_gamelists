@@ -59,17 +59,21 @@ export default function Features() {
             return (
               <div 
                 key={index}
-                className="p-6 rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300"
+                className="feature-wrapper"
               >
-                <div className="w-12 h-12 mb-4 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 p-2 flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-white" />
+                <div 
+                  className="p-6 rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-feature group"
+                >
+                  <div className="w-12 h-12 mb-4 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 p-2 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text group-hover:from-cyan-300 group-hover:to-purple-400 transition-all duration-300">
+                    {language === 'en' ? feature.titleEn : feature.titleZh}
+                  </h3>
+                  <p className="text-gray-400 group-hover:text-gray-300 transition-colors duration-300">
+                    {language === 'en' ? feature.descriptionEn : feature.descriptionZh}
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-                  {language === 'en' ? feature.titleEn : feature.titleZh}
-                </h3>
-                <p className="text-gray-400">
-                  {language === 'en' ? feature.descriptionEn : feature.descriptionZh}
-                </p>
               </div>
             );
           })}

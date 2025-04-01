@@ -48,26 +48,28 @@ export default function FAQ() {
           {faqs.map((faq, index) => (
             <div 
               key={index}
-              className="mb-4 rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 overflow-hidden"
+              className="feature-wrapper mb-4"
             >
-              <button
-                className="w-full px-6 py-4 flex items-center justify-between text-left"
-                onClick={() => setOpenIndex(openIndex === index ? null : index)}
-              >
-                <span className="text-lg font-semibold text-white">
-                  {language === 'en' ? faq.questionEn : faq.questionZh}
-                </span>
-                {openIndex === index ? (
-                  <ChevronUp className="w-5 h-5 text-cyan-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-cyan-400" />
+              <div className={`rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-feature group ${openIndex === index ? 'border-cyan-500/40' : ''}`}>
+                <button
+                  className="w-full px-6 py-4 flex items-center justify-between text-left group-hover:bg-gray-900/50 transition-colors duration-300"
+                  onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                >
+                  <span className="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors duration-300">
+                    {language === 'en' ? faq.questionEn : faq.questionZh}
+                  </span>
+                  {openIndex === index ? (
+                    <ChevronUp className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                  )}
+                </button>
+                {openIndex === index && (
+                  <div className="px-6 pb-4 text-gray-300 group-hover:text-gray-200 transition-colors duration-300">
+                    {language === 'en' ? faq.answerEn : faq.answerZh}
+                  </div>
                 )}
-              </button>
-              {openIndex === index && (
-                <div className="px-6 pb-4 text-gray-300">
-                  {language === 'en' ? faq.answerEn : faq.answerZh}
-                </div>
-              )}
+              </div>
             </div>
           ))}
         </div>

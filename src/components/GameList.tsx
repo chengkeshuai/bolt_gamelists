@@ -85,28 +85,39 @@ export default function GameList() {
   return (
     <section id="games" className="py-20 bg-black/80">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {games.map((game) => (
-            <div key={game.id} className="bg-gradient-to-r from-gray-900 to-black p-1 rounded-xl hover:from-cyan-900 hover:to-purple-900 transition">
-              <div className="bg-black rounded-lg overflow-hidden">
-                <img src={game.thumbnail} alt={game.name[language]} className="w-full h-48 object-cover" />
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-bold text-white">{game.name[language]}</h3>
-                    <div className="flex items-center">
-                      <span className="text-yellow-400">★</span>
-                      <span className="ml-1 text-gray-300">{game.rating}</span>
-                    </div>
+            <div 
+              key={game.id} 
+              className="card-wrapper"
+            >
+              <div className="bg-gradient-to-r from-gray-900 to-black p-[1px] rounded-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-glow group">
+                <div className="bg-black rounded-xl overflow-hidden">
+                  <div className="relative">
+                    <img 
+                      src={game.thumbnail} 
+                      alt={game.name[language]} 
+                      className="w-full h-40 object-cover" 
+                    />
                   </div>
-                  <p className="text-gray-400 mb-4">{game.description[language]}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-cyan-400">{t('game.rank')} #{game.rank}</span>
-                    <button 
-                      onClick={() => window.open(game.url, '_blank', 'width=800,height=600')}
-                      className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full text-sm font-semibold hover:from-cyan-600 hover:to-purple-700 transition"
-                    >
-                      {t('game.playNow')}
-                    </button>
+                  <div className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">{game.name[language]}</h3>
+                      <div className="flex items-center">
+                        <span className="text-yellow-400">★</span>
+                        <span className="ml-1 text-gray-300">{game.rating}</span>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 mb-3 text-sm">{game.description[language]}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-cyan-400">{t('game.rank')} #{game.rank}</span>
+                      <button 
+                        onClick={() => window.open(game.url, '_blank', 'width=800,height=600')}
+                        className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full text-xs font-semibold hover:from-cyan-600 hover:to-purple-700 transition-colors duration-300"
+                      >
+                        {t('game.playNow')}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

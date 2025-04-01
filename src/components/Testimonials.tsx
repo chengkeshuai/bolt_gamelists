@@ -48,23 +48,28 @@ export default function Testimonials() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((testimonial, index) => (
-            <div key={index} className="p-6 rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300">
-              <div className="flex mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-300 mb-4">
-                {language === 'en' ? testimonial.textEn : testimonial.textZh}
-              </p>
-              <div className="flex items-center">
-                <div>
-                  <h4 className="font-semibold text-white">
-                    {language === 'en' ? testimonial.nameEn : testimonial.nameZh}
-                  </h4>
-                  <p className="text-gray-400 text-sm">
-                    {language === 'en' ? testimonial.roleEn : testimonial.roleZh}
-                  </p>
+            <div 
+              key={index} 
+              className="feature-wrapper"
+            >
+              <div className="h-[280px] p-6 rounded-lg bg-gradient-to-r from-gray-900 to-black border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-feature group flex flex-col">
+                <div className="flex mb-4 group-hover:scale-105 transition-transform duration-300">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-300 mb-4 flex-grow group-hover:text-gray-200 transition-colors duration-300">
+                  {language === 'en' ? testimonial.textEn : testimonial.textZh}
+                </p>
+                <div className="flex items-center mt-auto">
+                  <div>
+                    <h4 className="font-semibold text-white group-hover:text-cyan-400 transition-colors duration-300">
+                      {language === 'en' ? testimonial.nameEn : testimonial.nameZh}
+                    </h4>
+                    <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors duration-300">
+                      {language === 'en' ? testimonial.roleEn : testimonial.roleZh}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
