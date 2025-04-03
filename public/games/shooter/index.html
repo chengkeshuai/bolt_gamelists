@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赛博太空射击</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: #4a9eff;
+        }
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4a9eff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        .score {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .lives {
+            font-size: 20px;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 16px;
+            color: #4a9eff;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #4a9eff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+            z-index: 100;
+        }
+        button {
+            background: #4a9eff;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #357abd;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="score">分数: <span id="score">0</span></div>
+            <div class="lives">生命: <span id="lives">3</span></div>
+        </div>
+        <div class="controls">
+            ← → : 移动飞船 | 空格键: 发射激光
+        </div>
+        <div id="game-over">
+            <h2>游戏结束</h2>
+            <p>最终分数: <span id="final-score">0</span></p>
+            <button onclick="resetGame()">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 800;
+        canvas.height = 600;
+        
+        const PLAYER_WIDTH = 40;
+        const PLAYER_HEIGHT = 40;
+        const LASER_WIDTH = 4;
+        const LASER_HEIGHT = 15;
+        const ENEMY_WIDTH = 30;
+        const ENEMY_HEIGHT = 30;
+        
+        let player = {
+            x: canvas.width / 2 - PLAYER_WIDTH / 2,
+            y: canvas.height - 60,
+            dx: 5,
+            width: PLAYER_WIDTH,
+            height: PLAYER_HEIGHT
+        };
+        
+        let lasers = [];
+        let enemies = [];
+        let particles = [];
+        let score = 0;
+        let lives = 3;
+        let gameLoop;
+        let enemySpawnInterval;
+        let keys = {};
+        let lastShot = 0;
+        const SHOT_COOLDOWN = 250; // 射击冷却时间（毫秒）
+        
+        // 接收来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'keydown') {
+                handleKeyDown(event.data.event);
+            } else if (event.data.type === 'keyup') {
+                handleKeyUp(event.data.event);
+            }
+        });
+
+        function handleKeyDown(event) {
+            keys[event.key] = true;
+            
+            if (event.key === ' ') {
+                shoot();
+            }
+        }
+
+        function handleKeyUp(event) {
+            keys[event.key] = false;
+        }
+        
+        function shoot() {
+            const now = Date.now();
+            if (now - lastShot >= SHOT_COOLDOWN) {
+                lasers.push({
+                    x: player.x + PLAYER_WIDTH / 2 - LASER_WIDTH / 2,
+                    y: player.y,
+                    width: LASER_WIDTH,
+                    height: LASER_HEIGHT,
+                    speed: 7
+                });
+                lastShot = now;
+            }
+        }
+        
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                const angle = (Math.random() * Math.PI * 2);
+                const speed = Math.random() * 3 + 2;
+                particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    color: color,
+                    size: Math.random() * 3 + 2
+                });
+            }
+        }
+        
+        function spawnEnemy() {
+            const types = [
+                { color: '#ff3366', speed: 2, points: 100 },
+                { color: '#33ff66', speed: 3, points: 150 },
+                { color: '#ff6633', speed: 4, points: 200 }
+            ];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            enemies.push({
+                x: Math.random() * (canvas.width - ENEMY_WIDTH),
+                y: -ENEMY_HEIGHT,
+                width: ENEMY_WIDTH,
+                height: ENEMY_HEIGHT,
+                speed: type.speed,
+                color: type.color,
+                points: type.points
+            });
+        }
+        
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT / 2);
+            
+            // 绘制飞船主体
+            ctx.fillStyle = '#4a9eff';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#4a9eff';
+            
+            // 飞船形状
+            ctx.beginPath();
+            ctx.moveTo(0, -PLAYER_HEIGHT / 2);
+            ctx.lineTo(PLAYER_WIDTH / 2, PLAYER_HEIGHT / 2);
+            ctx.lineTo(-PLAYER_WIDTH / 2, PLAYER_HEIGHT / 2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 引擎效果
+            ctx.fillStyle = '#ff3366';
+            ctx.shadowColor = '#ff3366';
+            ctx.beginPath();
+            ctx.moveTo(-PLAYER_WIDTH / 4, PLAYER_HEIGHT / 2);
+            ctx.lineTo(PLAYER_WIDTH / 4, PLAYER_HEIGHT / 2);
+            ctx.lineTo(0, PLAYER_HEIGHT / 2 + 10);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        function drawLasers() {
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff3366';
+            ctx.fillStyle = '#ff3366';
+            
+            lasers.forEach(laser => {
+                ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+            });
+        }
+        
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.translate(enemy.x + ENEMY_WIDTH / 2, enemy.y + ENEMY_HEIGHT / 2);
+                
+                // 绘制敌人
+                ctx.fillStyle = enemy.color;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = enemy.color;
+                
+                // 敌人形状
+                ctx.beginPath();
+                ctx.moveTo(0, ENEMY_HEIGHT / 2);
+                ctx.lineTo(ENEMY_WIDTH / 2, -ENEMY_HEIGHT / 2);
+                ctx.lineTo(-ENEMY_WIDTH / 2, -ENEMY_HEIGHT / 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+            });
+        }
+        
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.save();
+                ctx.globalAlpha = particle.alpha;
+                ctx.fillStyle = particle.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(74, 158, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // 绘制垂直线
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 绘制水平线
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        function update() {
+            // 移动玩家
+            if (keys['ArrowLeft']) {
+                player.x = Math.max(0, player.x - player.dx);
+            }
+            if (keys['ArrowRight']) {
+                player.x = Math.min(canvas.width - PLAYER_WIDTH, player.x + player.dx);
+            }
+            
+            // 移动激光
+            lasers = lasers.filter(laser => {
+                laser.y -= laser.speed;
+                return laser.y + laser.height > 0;
+            });
+            
+            // 移动敌人
+            enemies = enemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                
+                // 检查与玩家的碰撞
+                if (checkCollision(enemy, player)) {
+                    lives--;
+                    document.getElementById('lives').textContent = lives;
+                    createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                    return false;
+                }
+                
+                // 检查与激光的碰撞
+                for (let i = lasers.length - 1; i >= 0; i--) {
+                    if (checkCollision(enemy, lasers[i])) {
+                        score += enemy.points;
+                        document.getElementById('score').textContent = score;
+                        createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                        lasers.splice(i, 1);
+                        return false;
+                    }
+                }
+                
+                return enemy.y < canvas.height;
+            });
+            
+            // 更新粒子
+            particles = particles.filter(particle => {
+                particle.x += particle.dx;
+                particle.y += particle.dy;
+                particle.alpha -= 0.02;
+                return particle.alpha > 0;
+            });
+        }
+        
+        function gameOver() {
+            clearInterval(gameLoop);
+            clearInterval(enemySpawnInterval);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over').style.display = 'block';
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawGrid();
+            drawParticles();
+            drawPlayer();
+            drawLasers();
+            drawEnemies();
+        }
+        
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            lasers = [];
+            enemies = [];
+            particles = [];
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('game-over').style.display = 'none';
+            
+            player.x = canvas.width / 2 - PLAYER_WIDTH / 2;
+            
+            clearInterval(gameLoop);
+            clearInterval(enemySpawnInterval);
+            
+            gameLoop = setInterval(() => {
+                update();
+                draw();
+            }, 1000 / 60);
+            
+            enemySpawnInterval = setInterval(spawnEnemy, 1000);
+        }
+        
+        // 添加键盘事件监听
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        
+        // 初始化游戏
+        resetGame();
+    </script>
+</body>
+</html> 

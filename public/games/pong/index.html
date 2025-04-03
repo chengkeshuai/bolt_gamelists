@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>霓虹乒乓</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: #4a9eff;
+        }
+        canvas {
+            border: 2px solid #4a9eff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+        }
+        .score-board {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 100px;
+            font-size: 32px;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 16px;
+            color: #4a9eff;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        #game-over {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #4a9eff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+        }
+        button {
+            background: #4a9eff;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #357abd;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="score-board">
+        <div id="player1-score">0</div>
+        <div id="player2-score">0</div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        玩家1: W/S 键控制 | 玩家2: ↑/↓ 键控制
+    </div>
+    <div id="game-over">
+        <h2 style="color: #4a9eff; margin-bottom: 20px;">游戏结束</h2>
+        <p style="color: #4a9eff; margin-bottom: 20px;">获胜者: <span id="winner"></span></p>
+        <button onclick="resetGame()">重新开始</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const p1ScoreElement = document.getElementById('player1-score');
+        const p2ScoreElement = document.getElementById('player2-score');
+        const gameOverElement = document.getElementById('game-over');
+        const winnerElement = document.getElementById('winner');
+
+        canvas.width = 800;
+        canvas.height = 500;
+
+        const paddleWidth = 10;
+        const paddleHeight = 100;
+        const ballSize = 8;
+        const winningScore = 5;
+
+        let p1Y = canvas.height/2 - paddleHeight/2;
+        let p2Y = canvas.height/2 - paddleHeight/2;
+        let ballX = canvas.width/2;
+        let ballY = canvas.height/2;
+        let ballSpeedX = 5;
+        let ballSpeedY = 5;
+        let p1Score = 0;
+        let p2Score = 0;
+        let gameLoop;
+        let isGameOver = false;
+
+        // 接收来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'keydown') {
+                handleKeyPress(event.data.event);
+            }
+        });
+
+        function handleKeyPress(event) {
+            if (isGameOver) return;
+
+            const speed = 20;
+            switch(event.key) {
+                case 'w':
+                case 'W':
+                    p1Y = Math.max(0, p1Y - speed);
+                    break;
+                case 's':
+                case 'S':
+                    p1Y = Math.min(canvas.height - paddleHeight, p1Y + speed);
+                    break;
+                case 'ArrowUp':
+                    p2Y = Math.max(0, p2Y - speed);
+                    break;
+                case 'ArrowDown':
+                    p2Y = Math.min(canvas.height - paddleHeight, p2Y + speed);
+                    break;
+            }
+        }
+
+        function drawPaddle(x, y) {
+            ctx.fillStyle = '#4a9eff';
+            ctx.shadowColor = '#4a9eff';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        function drawBall() {
+            ctx.fillStyle = '#ff4a4a';
+            ctx.shadowColor = '#ff4a4a';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawNet() {
+            ctx.setLineDash([5, 15]);
+            ctx.strokeStyle = '#4a9eff';
+            ctx.shadowColor = '#4a9eff';
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.moveTo(canvas.width/2, 0);
+            ctx.lineTo(canvas.width/2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function resetBall() {
+            ballX = canvas.width/2;
+            ballY = canvas.height/2;
+            ballSpeedX = ballSpeedX > 0 ? 5 : -5;
+            ballSpeedY = (Math.random() * 6 - 3);
+        }
+
+        function updateGame() {
+            // 移动球
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // 球碰到上下边界
+            if (ballY < 0 || ballY > canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // 检查球是否碰到球拍
+            if (ballX < paddleWidth + ballSize) {
+                if (ballY > p1Y && ballY < p1Y + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.1;
+                    let deltaY = ballY - (p1Y + paddleHeight/2);
+                    ballSpeedY = deltaY * 0.2;
+                } else if (ballX < 0) {
+                    p2Score++;
+                    p2ScoreElement.textContent = p2Score;
+                    if (p2Score >= winningScore) {
+                        gameOver("玩家2");
+                    } else {
+                        resetBall();
+                    }
+                }
+            }
+            if (ballX > canvas.width - paddleWidth - ballSize) {
+                if (ballY > p2Y && ballY < p2Y + paddleHeight) {
+                    ballSpeedX = -ballSpeedX * 1.1;
+                    let deltaY = ballY - (p2Y + paddleHeight/2);
+                    ballSpeedY = deltaY * 0.2;
+                } else if (ballX > canvas.width) {
+                    p1Score++;
+                    p1ScoreElement.textContent = p1Score;
+                    if (p1Score >= winningScore) {
+                        gameOver("玩家1");
+                    } else {
+                        resetBall();
+                    }
+                }
+            }
+        }
+
+        function gameOver(winner) {
+            isGameOver = true;
+            clearInterval(gameLoop);
+            winnerElement.textContent = winner;
+            gameOverElement.style.display = 'block';
+        }
+
+        function resetGame() {
+            p1Score = 0;
+            p2Score = 0;
+            p1ScoreElement.textContent = p1Score;
+            p2ScoreElement.textContent = p2Score;
+            p1Y = canvas.height/2 - paddleHeight/2;
+            p2Y = canvas.height/2 - paddleHeight/2;
+            isGameOver = false;
+            gameOverElement.style.display = 'none';
+            resetBall();
+            clearInterval(gameLoop);
+            gameLoop = setInterval(draw, 1000/60);
+        }
+
+        function draw() {
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制网格线
+            drawNet();
+            
+            // 绘制球拍
+            drawPaddle(0, p1Y);
+            drawPaddle(canvas.width - paddleWidth, p2Y);
+            
+            // 绘制球
+            drawBall();
+            
+            if (!isGameOver) {
+                updateGame();
+            }
+        }
+
+        // 初始化游戏
+        resetGame();
+
+        // 添加键盘事件监听
+        document.addEventListener('keydown', handleKeyPress);
+    </script>
+</body>
+</html> 

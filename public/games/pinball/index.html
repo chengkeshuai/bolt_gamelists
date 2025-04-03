@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赛博弹珠台</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: #4a9eff;
+        }
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #4a9eff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+            overflow: hidden;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        .score {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .lives {
+            font-size: 20px;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 16px;
+            color: #4a9eff;
+            text-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #4a9eff;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.4);
+            z-index: 100;
+        }
+        button {
+            background: #4a9eff;
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #357abd;
+            box-shadow: 0 0 10px rgba(74, 158, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="score">分数: <span id="score">0</span></div>
+            <div class="lives">生命: <span id="lives">3</span></div>
+        </div>
+        <div class="controls">
+            ← → : 移动挡板 | 空格键: 发射弹珠
+        </div>
+        <div id="game-over">
+            <h2>游戏结束</h2>
+            <p>最终分数: <span id="final-score">0</span></p>
+            <button onclick="resetGame()">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 800;
+        canvas.height = 600;
+        
+        const PADDLE_WIDTH = 100;
+        const PADDLE_HEIGHT = 20;
+        const BALL_RADIUS = 10;
+        const BUMPER_RADIUS = 30;
+        
+        let paddle = {
+            x: canvas.width / 2 - PADDLE_WIDTH / 2,
+            y: canvas.height - 40,
+            dx: 8
+        };
+        
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height - 60,
+            dx: 0,
+            dy: 0,
+            speed: 7,
+            launched: false
+        };
+        
+        let bumpers = [
+            { x: 200, y: 200, radius: BUMPER_RADIUS, color: '#ff3366' },
+            { x: 400, y: 150, radius: BUMPER_RADIUS, color: '#33ff66' },
+            { x: 600, y: 200, radius: BUMPER_RADIUS, color: '#ff6633' },
+            { x: 300, y: 300, radius: BUMPER_RADIUS, color: '#6633ff' },
+            { x: 500, y: 300, radius: BUMPER_RADIUS, color: '#ffff33' }
+        ];
+        
+        let score = 0;
+        let lives = 3;
+        let gameLoop;
+        let keys = {};
+        
+        // 接收来自父窗口的消息
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'keydown') {
+                handleKeyDown(event.data.event);
+            } else if (event.data.type === 'keyup') {
+                handleKeyUp(event.data.event);
+            }
+        });
+
+        function handleKeyDown(event) {
+            keys[event.key] = true;
+            
+            if (event.key === ' ' && !ball.launched) {
+                launchBall();
+            }
+        }
+
+        function handleKeyUp(event) {
+            keys[event.key] = false;
+        }
+        
+        function launchBall() {
+            if (!ball.launched) {
+                ball.launched = true;
+                ball.dx = ball.speed * (Math.random() * 0.5 + 0.5) * (Math.random() < 0.5 ? 1 : -1);
+                ball.dy = -ball.speed;
+            }
+        }
+        
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#4a9eff';
+            ctx.fill();
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#4a9eff';
+            ctx.closePath();
+        }
+        
+        function drawPaddle() {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#4a9eff';
+            ctx.fillStyle = '#4a9eff';
+            ctx.fillRect(paddle.x, paddle.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+        }
+        
+        function drawBumpers() {
+            bumpers.forEach(bumper => {
+                ctx.beginPath();
+                ctx.arc(bumper.x, bumper.y, bumper.radius, 0, Math.PI * 2);
+                ctx.fillStyle = bumper.color;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = bumper.color;
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+        
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(74, 158, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // 绘制垂直线
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // 绘制水平线
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        function checkCollision(circle1, circle2) {
+            const dx = circle1.x - circle2.x;
+            const dy = circle1.y - circle2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < circle1.radius + circle2.radius;
+        }
+        
+        function handleBumperCollision(bumper) {
+            const dx = ball.x - bumper.x;
+            const dy = ball.y - bumper.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 计算碰撞后的速度
+            const nx = dx / distance;
+            const ny = dy / distance;
+            
+            // 反弹
+            const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+            ball.dx = nx * speed * 1.1; // 增加一点速度
+            ball.dy = ny * speed * 1.1;
+            
+            // 防止卡在碰撞体内
+            const minDistance = BALL_RADIUS + bumper.radius;
+            ball.x = bumper.x + nx * minDistance;
+            ball.y = bumper.y + ny * minDistance;
+            
+            // 增加分数
+            score += 100;
+            document.getElementById('score').textContent = score;
+        }
+        
+        function update() {
+            // 移动挡板
+            if (keys['ArrowLeft']) {
+                paddle.x = Math.max(0, paddle.x - paddle.dx);
+            }
+            if (keys['ArrowRight']) {
+                paddle.x = Math.min(canvas.width - PADDLE_WIDTH, paddle.x + paddle.dx);
+            }
+            
+            // 如果球还没发射，跟随挡板移动
+            if (!ball.launched) {
+                ball.x = paddle.x + PADDLE_WIDTH / 2;
+                return;
+            }
+            
+            // 移动球
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            
+            // 检查墙壁碰撞
+            if (ball.x <= BALL_RADIUS || ball.x >= canvas.width - BALL_RADIUS) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y <= BALL_RADIUS) {
+                ball.dy = -ball.dy;
+            }
+            
+            // 检查挡板碰撞
+            if (ball.y >= paddle.y - BALL_RADIUS &&
+                ball.y <= paddle.y + PADDLE_HEIGHT &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + PADDLE_WIDTH) {
+                
+                // 根据击中挡板的位置计算反弹角度
+                const hitPos = (ball.x - paddle.x) / PADDLE_WIDTH;
+                const angle = (hitPos - 0.5) * Math.PI * 0.7;
+                
+                ball.dx = ball.speed * Math.sin(angle);
+                ball.dy = -ball.speed * Math.cos(angle);
+            }
+            
+            // 检查弹珠台碰撞
+            bumpers.forEach(bumper => {
+                if (checkCollision(
+                    { x: ball.x, y: ball.y, radius: BALL_RADIUS },
+                    { x: bumper.x, y: bumper.y, radius: bumper.radius }
+                )) {
+                    handleBumperCollision(bumper);
+                }
+            });
+            
+            // 检查是否失去生命
+            if (ball.y >= canvas.height + BALL_RADIUS) {
+                lives--;
+                document.getElementById('lives').textContent = lives;
+                
+                if (lives <= 0) {
+                    gameOver();
+                } else {
+                    resetBall();
+                }
+            }
+        }
+        
+        function resetBall() {
+            ball.x = paddle.x + PADDLE_WIDTH / 2;
+            ball.y = canvas.height - 60;
+            ball.dx = 0;
+            ball.dy = 0;
+            ball.launched = false;
+        }
+        
+        function gameOver() {
+            clearInterval(gameLoop);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over').style.display = 'block';
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawGrid();
+            drawBumpers();
+            drawPaddle();
+            drawBall();
+        }
+        
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('game-over').style.display = 'none';
+            
+            paddle.x = canvas.width / 2 - PADDLE_WIDTH / 2;
+            resetBall();
+            
+            clearInterval(gameLoop);
+            gameLoop = setInterval(() => {
+                update();
+                draw();
+            }, 1000 / 60);
+        }
+        
+        // 添加键盘事件监听
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        
+        // 初始化游戏
+        resetGame();
+    </script>
+</body>
+</html> 

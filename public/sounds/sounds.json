@@ -1,0 +1,108 @@
+{
+  "sounds": {
+    "button-click.mp3": {
+      "description": "按钮点击音效",
+      "duration": "0.1s",
+      "category": "ui"
+    },
+    "game-start.mp3": {
+      "description": "游戏开始音效",
+      "duration": "1.5s",
+      "category": "ui"
+    },
+    "game-over.mp3": {
+      "description": "游戏结束音效",
+      "duration": "2s",
+      "category": "game"
+    },
+    "collision.mp3": {
+      "description": "碰撞音效",
+      "duration": "0.2s",
+      "category": "game"
+    },
+    "point-scored.mp3": {
+      "description": "得分音效",
+      "duration": "0.5s",
+      "category": "game"
+    },
+    "level-up.mp3": {
+      "description": "升级音效",
+      "duration": "1s",
+      "category": "game"
+    },
+    "power-up.mp3": {
+      "description": "能量获取音效",
+      "duration": "0.8s",
+      "category": "game"
+    },
+    "move.mp3": {
+      "description": "移动音效",
+      "duration": "0.1s",
+      "category": "game"
+    },
+    "merge.mp3": {
+      "description": "方块合并音效",
+      "duration": "0.3s",
+      "category": "game"
+    },
+    "block-rotate.mp3": {
+      "description": "方块旋转音效",
+      "duration": "0.2s",
+      "category": "game"
+    },
+    "block-drop.mp3": {
+      "description": "方块落地音效",
+      "duration": "0.3s",
+      "category": "game"
+    },
+    "paddle-hit.mp3": {
+      "description": "挡板击球音效",
+      "duration": "0.2s",
+      "category": "game"
+    },
+    "wall-hit.mp3": {
+      "description": "墙壁碰撞音效",
+      "duration": "0.15s",
+      "category": "game"
+    },
+    "snake-eat.mp3": {
+      "description": "贪吃蛇吃到食物音效",
+      "duration": "0.3s",
+      "category": "game"
+    },
+    "snake-die.mp3": {
+      "description": "贪吃蛇死亡音效",
+      "duration": "1s",
+      "category": "game"
+    },
+    "bonus.mp3": {
+      "description": "获得奖励音效",
+      "duration": "0.7s",
+      "category": "game"
+    },
+    "warning.mp3": {
+      "description": "警告音效",
+      "duration": "0.5s",
+      "category": "game"
+    },
+    "achievement.mp3": {
+      "description": "成就达成音效",
+      "duration": "1.2s",
+      "category": "ui"
+    },
+    "background-music.mp3": {
+      "description": "背景音乐",
+      "duration": "120s",
+      "category": "ambient",
+      "loop": true
+    }
+  },
+  "categories": {
+    "ui": "界面音效",
+    "game": "游戏音效",
+    "ambient": "环境音效"
+  },
+  "license": "CC0 - Creative Commons Zero",
+  "attribution": "音效来自 freesound.org，经过处理以适应赛博朋克风格",
+  "version": "1.0.0"
+} 

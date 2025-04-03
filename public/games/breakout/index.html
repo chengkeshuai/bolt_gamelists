@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Breakout</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2),
+                        inset 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+        
+        canvas {
+            border-radius: 8px;
+        }
+        
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            font-size: 20px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            z-index: 1;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="hud">
+            Score: <span id="score">0</span>
+            <br>
+            Lives: <span id="lives">3</span>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls">
+            ←/→: Move | Space: Launch Ball
+        </div>
+    </div>
+    <script>
+        class BreakoutGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = 800;
+                this.canvas.height = 600;
+                
+                this.paddleWidth = 100;
+                this.paddleHeight = 10;
+                this.ballSize = 8;
+                
+                this.paddle = {
+                    x: this.canvas.width / 2 - this.paddleWidth / 2,
+                    y: this.canvas.height - 30,
+                    dx: 8
+                };
+                
+                this.ball = {
+                    x: this.canvas.width / 2,
+                    y: this.paddle.y - this.ballSize,
+                    dx: 0,
+                    dy: 0,
+                    speed: 7,
+                    launched: false,
+                    trail: []
+                };
+                
+                this.brickRowCount = 6;
+                this.brickColumnCount = 10;
+                this.brickWidth = 70;
+                this.brickHeight = 20;
+                this.brickPadding = 10;
+                this.brickOffsetTop = 80;
+                this.brickOffsetLeft = 45;
+                
+                this.score = 0;
+                this.lives = 3;
+                this.gameStarted = false;
+                
+                this.bricks = [];
+                this.initBricks();
+                
+                this.keys = {};
+                this.bindEvents();
+                this.draw();
+            }
+            
+            initBricks() {
+                const colors = [
+                    '#ff00ff', // 粉色
+                    '#00ffff', // 青色
+                    '#ff3366', // 红色
+                    '#33ff66', // 绿色
+                    '#6633ff', // 紫色
+                    '#ffff33'  // 黄色
+                ];
+                
+                for (let c = 0; c < this.brickColumnCount; c++) {
+                    this.bricks[c] = [];
+                    for (let r = 0; r < this.brickRowCount; r++) {
+                        this.bricks[c][r] = {
+                            x: 0,
+                            y: 0,
+                            status: 1,
+                            color: colors[r],
+                            glowIntensity: 1
+                        };
+                    }
+                }
+            }
+            
+            bindEvents() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    if (e.code === 'Space' && !this.ball.launched) {
+                        this.launchBall();
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+            }
+            
+            launchBall() {
+                if (!this.gameStarted) {
+                    this.gameStarted = true;
+                    this.animate();
+                }
+                this.ball.launched = true;
+                this.ball.dx = this.ball.speed;
+                this.ball.dy = -this.ball.speed;
+            }
+            
+            update() {
+                // 更新挡板位置
+                if (this.keys['ArrowLeft'] && this.paddle.x > 0) {
+                    this.paddle.x -= this.paddle.dx;
+                }
+                if (this.keys['ArrowRight'] && this.paddle.x < this.canvas.width - this.paddleWidth) {
+                    this.paddle.x += this.paddle.dx;
+                }
+                
+                // 如果球还没发射，跟随挡板移动
+                if (!this.ball.launched) {
+                    this.ball.x = this.paddle.x + this.paddleWidth / 2;
+                    return;
+                }
+                
+                // 更新球的位置
+                this.ball.x += this.ball.dx;
+                this.ball.y += this.ball.dy;
+                
+                // 记录球的轨迹
+                this.ball.trail.push({x: this.ball.x, y: this.ball.y});
+                if (this.ball.trail.length > 5) {
+                    this.ball.trail.shift();
+                }
+                
+                // 球的碰撞检测
+                if (this.ball.x <= this.ballSize || this.ball.x >= this.canvas.width - this.ballSize) {
+                    this.ball.dx *= -1;
+                }
+                if (this.ball.y <= this.ballSize) {
+                    this.ball.dy *= -1;
+                }
+                
+                // 挡板碰撞
+                if (this.ball.y >= this.paddle.y - this.ballSize &&
+                    this.ball.x >= this.paddle.x &&
+                    this.ball.x <= this.paddle.x + this.paddleWidth) {
+                    // 根据击中挡板的位置改变反弹角度
+                    const hitPos = (this.ball.x - this.paddle.x) / this.paddleWidth;
+                    const angle = (hitPos - 0.5) * Math.PI * 0.7;
+                    this.ball.dx = this.ball.speed * Math.sin(angle);
+                    this.ball.dy = -this.ball.speed * Math.cos(angle);
+                }
+                
+                // 砖块碰撞
+                for (let c = 0; c < this.brickColumnCount; c++) {
+                    for (let r = 0; r < this.brickRowCount; r++) {
+                        const brick = this.bricks[c][r];
+                        if (brick.status === 1) {
+                            brick.x = (c * (this.brickWidth + this.brickPadding)) + this.brickOffsetLeft;
+                            brick.y = (r * (this.brickHeight + this.brickPadding)) + this.brickOffsetTop;
+                            
+                            if (this.ball.x >= brick.x &&
+                                this.ball.x <= brick.x + this.brickWidth &&
+                                this.ball.y >= brick.y &&
+                                this.ball.y <= brick.y + this.brickHeight) {
+                                this.ball.dy *= -1;
+                                brick.status = 0;
+                                this.score += 10;
+                                document.getElementById('score').textContent = this.score;
+                                
+                                // 检查是否获胜
+                                if (this.score === this.brickRowCount * this.brickColumnCount * 10) {
+                                    alert('恭喜你赢了！');
+                                    document.location.reload();
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 球掉落检测
+                if (this.ball.y >= this.canvas.height - this.ballSize) {
+                    this.lives--;
+                    document.getElementById('lives').textContent = this.lives;
+                    
+                    if (this.lives === 0) {
+                        alert('游戏结束');
+                        document.location.reload();
+                    } else {
+                        this.ball.launched = false;
+                        this.ball.x = this.paddle.x + this.paddleWidth / 2;
+                        this.ball.y = this.paddle.y - this.ballSize;
+                        this.ball.dx = 0;
+                        this.ball.dy = 0;
+                    }
+                }
+            }
+            
+            draw() {
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制砖块
+                for (let c = 0; c < this.brickColumnCount; c++) {
+                    for (let r = 0; r < this.brickRowCount; r++) {
+                        const brick = this.bricks[c][r];
+                        if (brick.status === 1) {
+                            brick.x = (c * (this.brickWidth + this.brickPadding)) + this.brickOffsetLeft;
+                            brick.y = (r * (this.brickHeight + this.brickPadding)) + this.brickOffsetTop;
+                            
+                            // 绘制砖块的发光效果
+                            this.ctx.shadowBlur = 20;
+                            this.ctx.shadowColor = brick.color;
+                            this.ctx.fillStyle = brick.color;
+                            this.ctx.fillRect(brick.x, brick.y, this.brickWidth, this.brickHeight);
+                            
+                            // 添加内发光效果
+                            const gradient = this.ctx.createLinearGradient(
+                                brick.x, brick.y,
+                                brick.x, brick.y + this.brickHeight
+                            );
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+                            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                            this.ctx.fillStyle = gradient;
+                            this.ctx.fillRect(brick.x, brick.y, this.brickWidth, this.brickHeight);
+                        }
+                    }
+                }
+                
+                // 绘制球的轨迹
+                this.ball.trail.forEach((pos, i) => {
+                    const alpha = i / this.ball.trail.length;
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.3})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(pos.x, pos.y, this.ballSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // 绘制球
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = '#fff';
+                this.ctx.fillStyle = '#fff';
+                this.ctx.beginPath();
+                this.ctx.arc(this.ball.x, this.ball.y, this.ballSize, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 绘制挡板
+                this.ctx.shadowBlur = 20;
+                this.ctx.shadowColor = '#00ffff';
+                this.ctx.fillStyle = '#00ffff';
+                this.ctx.fillRect(this.paddle.x, this.paddle.y, this.paddleWidth, this.paddleHeight);
+                
+                // 重置阴影
+                this.ctx.shadowBlur = 0;
+            }
+            
+            animate() {
+                if (this.gameStarted) {
+                    this.update();
+                    this.draw();
+                    requestAnimationFrame(() => this.animate());
+                }
+            }
+        }
+        
+        new BreakoutGame();
+    </script>
+</body>
+</html> 
