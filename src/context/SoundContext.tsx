@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { SoundEffect, getSoundConfig } from '../services/SoundService';
 
 interface CategoryVolumes {
@@ -11,6 +11,7 @@ interface SoundContextType {
   isSoundEnabled: boolean;
   toggleSound: () => void;
   playSound: (effect: SoundEffect) => void;
+  playBackgroundMusic: () => void;
   volume: number;
   setVolume: (value: number) => void;
   categoryVolumes: CategoryVolumes;
@@ -49,6 +50,9 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [volume, setVolume] = useState(() => loadSoundSettings().volume);
   const [categoryVolumes, setCategoryVolumes] = useState<CategoryVolumes>(() => loadSoundSettings().categoryVolumes);
   const [audioCache] = useState<Map<string, HTMLAudioElement>>(new Map());
+
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null);
+  const [isBgMusicStarted, setIsBgMusicStarted] = useState(false);
 
   // 保存音效设置到本地存储
   useEffect(() => {
@@ -92,11 +96,50 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, [isSoundEnabled, volume, categoryVolumes, audioCache]);
 
+  const playBackgroundMusic = useCallback(() => {
+    if (!isSoundEnabled || isBgMusicStarted) return;
+
+    if (!backgroundMusicRef.current) {
+      backgroundMusicRef.current = new Audio('/sounds/background-music.mp3');
+      backgroundMusicRef.current.loop = true;
+      const bgVolume = volume * categoryVolumes.ambient;
+      backgroundMusicRef.current.volume = Math.min(bgVolume, 1);
+    }
+
+    backgroundMusicRef.current.play()
+      .then(() => {
+        setIsBgMusicStarted(true);
+      })
+      .catch(error => {
+        console.warn('Failed to play background music:', error);
+      });
+  }, [isSoundEnabled, volume, categoryVolumes.ambient, isBgMusicStarted]);
+
+  // 监听音量变化
+  useEffect(() => {
+    if (backgroundMusicRef.current) {
+      const bgVolume = volume * categoryVolumes.ambient;
+      backgroundMusicRef.current.volume = Math.min(bgVolume, 1);
+    }
+  }, [volume, categoryVolumes.ambient]);
+
+  // 监听音效开关
+  useEffect(() => {
+    if (backgroundMusicRef.current) {
+      if (!isSoundEnabled) {
+        backgroundMusicRef.current.pause();
+      } else if (isBgMusicStarted) {
+        backgroundMusicRef.current.play().catch(console.warn);
+      }
+    }
+  }, [isSoundEnabled, isBgMusicStarted]);
+
   return (
     <SoundContext.Provider value={{
       isSoundEnabled,
       toggleSound,
       playSound,
+      playBackgroundMusic,
       volume,
       setVolume,
       categoryVolumes,

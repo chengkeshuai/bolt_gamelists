@@ -180,11 +180,12 @@ const defaultThumbnail = '/game-thumbnails/placeholder.svg';
 
 function GameCard({ game, onClick }: GameCardProps) {
   const { language } = useLanguage();
-  const { playSound } = useSound();
+  const { playSound, playBackgroundMusic } = useSound();
   const [imgError, setImgError] = useState(false);
 
   const handleClick = () => {
     playSound(SoundEffect.BUTTON_CLICK);
+    playBackgroundMusic();
     onClick();
   };
 
